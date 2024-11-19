@@ -1,8 +1,15 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 from instagrapi import Client
 import time
+import os
 
+# Load environment variables from the .env file
+load_dotenv()
+
+instagram_username = os.getenv("INSTAGRAM_USERNAME")
+instagram_password = os.getenv("INSTAGRAM_PASSWORD")
 # FastAPI app instance
 app = FastAPI()
 
@@ -29,7 +36,7 @@ class ProfileResponse(BaseModel):
 # Log in to Instagram once when the app starts
 def login_once():
     try:
-        cl.login("dailydoseof_art6", "imrankhan@") # gmail
+        cl.login(instagram_username, instagram_password) # gmail
         print("Logged in successfully")
     except Exception as e:
         print(f"Login failed: {e}")
