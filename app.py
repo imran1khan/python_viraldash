@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 from instagrapi import Client
+import time
 
 # FastAPI app instance
 app = FastAPI()
@@ -25,15 +26,23 @@ class ProfileResponse(BaseModel):
     is_verified: bool     # Added verification status
     category: str         # Added category if needed (e.g., Digital creator)
 
+# Log in to Instagram once when the app starts
+def login_once():
+    try:
+        cl.login("dailydoseof_art6", "imrankhan@") # gmail
+        print("Logged in successfully")
+    except Exception as e:
+        print(f"Login failed: {e}")
+        raise HTTPException(status_code=500, detail="Instagram login failed")
+
+# Call the login function at startup
+login_once()
+
 # Function to get Instagram profile data and recent posts
 def get_instagram_profile_data(username: str):
-    # Login to Instagram (replace with your credentials or implement OAuth)
-    cl.login("dailydoseof_art6", "imrankhan@")
-    
     try:
         # Get user profile details
         user_info = cl.user_info_by_username(username)
-        print(user_info)
         
         # Extract relevant data
         profile_data = {
@@ -42,25 +51,26 @@ def get_instagram_profile_data(username: str):
             "followers_count": user_info.follower_count,
             "following_count": user_info.following_count,
             "biography": user_info.biography,
-            "email": user_info.public_email if user_info.public_email else "Not available",  # Use public_email
+            "email": user_info.public_email if user_info.public_email else "Not available",
             "posts": [],
-            "profile_pic_url": str(user_info.profile_pic_url),  # Convert URL object to string
-            "is_verified": user_info.is_verified,          # Added verification status
-            "category": user_info.category if user_info.category else "Not available"  # Added category
+            "profile_pic_url": str(user_info.profile_pic_url),
+            "is_verified": user_info.is_verified,
+            "category": user_info.category if user_info.category else "Not available"
         }
 
-        # Get recent posts (limit to 2 posts or reels)
-        media = cl.user_medias(user_info.pk, 2)  # Fetch the most recent 2 posts
+        # Fetch recent posts, with delay for rate limiting
+        media = cl.user_medias(user_info.pk, 2)
         for m in media:
             post_data = {
-                "type": "reel" if m.media_type == 2 else "post",  # Media type 2 is a reel
-                "caption": m.caption if hasattr(m, 'caption') else "No caption",  # Check for 'caption' attribute
+                "type": "reel" if m.media_type == 2 else "post",
+                "caption": m.caption if hasattr(m, 'caption') else "No caption",
                 "image_url": m.thumbnail_url if m.media_type != 2 else m.video_url,
             }
             profile_data["posts"].append(post_data)
+            time.sleep(10)  # Delay to prevent rate limiting
 
         return profile_data
-    
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error fetching profile data: {e}")
 
